@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AutoHub - Full Screen Radio</title>
+    <title>AutoHub - Master Radio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.10/dist/hls.min.js"></script>
+    <!-- Swapped to Cloudflare CDN which is less likely to be blocked by browser environments -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js"></script>
     <style>
         body, html { 
             margin: 0; padding: 0; height: 100%; overflow: hidden; 
@@ -15,20 +16,19 @@
         }
         
         #station-carousel { 
-            display: flex; width: 300%; height: 100%; 
+            display: flex; width: 700%; height: 100%; 
             transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); 
         }
 
         .station-page { 
             width: 100vw; height: 100%; display: flex; 
             flex-direction: column; align-items: center; 
-            justify-content: center; padding: 1rem; 
+            justify-content: center; padding: 1.5rem; 
         }
 
-        /* Full Screen Station Name */
         .station-title {
-            font-size: 15vw;
-            line-height: 1;
+            font-size: 14vw;
+            line-height: 0.9;
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: -0.05em;
@@ -36,45 +36,48 @@
             width: 100%;
         }
 
-        /* Subtle Glow for Active State */
         .active-glow {
-            filter: drop-shadow(0 0 30px rgba(59, 130, 246, 0.3));
+            filter: drop-shadow(0 0 40px rgba(255, 255, 255, 0.2));
+            transition: filter 0.5s ease;
         }
 
-        /* Center Play/Pause Button - Massive and Clean */
         .master-control {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 0; left: 0;
             z-index: 100;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 100vw; height: 100vh;
+            display: flex; align-items: center; justify-content: center;
             background: transparent;
+            border: none;
+            cursor: pointer;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .play-pause-icon {
-            opacity: 0.15;
+            opacity: 0.1;
             transition: opacity 0.3s, transform 0.2s;
         }
 
-        .master-control:active .play-pause-icon {
-            transform: scale(0.9);
-            opacity: 0.4;
-        }
-
-        /* Status Bar */
         .status-bar {
             position: absolute;
-            top: 2rem;
+            top: 2.5rem;
             width: 100%;
             display: flex;
             justify-content: center;
             z-index: 50;
             pointer-events: none;
+        }
+
+        .dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            transition: all 0.4s ease;
+        }
+        .dot-active {
+            background: white;
+            width: 24px;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -82,58 +85,79 @@
 
     <div id="app-container" class="relative w-full h-full overflow-hidden">
         
-        <!-- Top Status -->
+        <!-- Status Overlay -->
         <div class="status-bar">
-            <div class="bg-white/5 border border-white/10 px-4 py-1.5 rounded-full flex items-center gap-2">
-                <div id="status-dot" class="w-2 h-2 rounded-full bg-neutral-600"></div>
-                <span id="bt-status" class="text-[9px] font-black uppercase tracking-widest text-white/40">Ready</span>
+            <div class="bg-white/5 border border-white/10 px-4 py-1.5 rounded-full flex items-center gap-3 shadow-lg">
+                <div id="status-dot" class="w-2 h-2 rounded-full bg-neutral-600 transition-colors"></div>
+                <span id="bt-status" class="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Ready</span>
             </div>
         </div>
 
-        <!-- Master Interaction Layer (The whole screen is a button) -->
+        <!-- Touch Interaction Layer -->
         <button class="master-control" onclick="togglePlay()">
             <div id="play-pause-container" class="play-pause-icon">
-                <i data-lucide="play" id="main-icon" style="width: 120px; height: 120px;"></i>
+                <i data-lucide="play" id="main-icon" style="width: 140px; height: 140px;"></i>
             </div>
         </button>
 
-        <!-- Main Station Content -->
+        <!-- Dynamic Station Pages -->
         <div id="station-carousel">
-            <!-- Radio Paradise Main -->
+            <!-- P1: Paradise -->
             <div class="station-page">
                 <div class="station-title text-blue-500" id="title-0">PARADISE</div>
-                <div class="text-white/20 font-bold tracking-[0.5em] mt-4 uppercase text-xs">Main Mix</div>
+                <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">Main Mix</div>
             </div>
-            <!-- Radio Paradise Rock -->
+            <!-- P2: Rock -->
             <div class="station-page">
                 <div class="station-title text-red-600" id="title-1">ROCK</div>
-                <div class="text-white/20 font-bold tracking-[0.5em] mt-4 uppercase text-xs">Radio Paradise</div>
+                <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">Paradise Rock</div>
             </div>
-            <!-- BBC Radio 4 -->
+            <!-- P3: BBC R4 -->
             <div class="station-page">
                 <div class="station-title text-neutral-400" id="title-2">RADIO 4</div>
-                <div class="text-white/20 font-bold tracking-[0.5em] mt-4 uppercase text-xs">BBC Live</div>
+                <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">BBC Culture</div>
+            </div>
+            <!-- P4: NPR News -->
+            <div class="station-page">
+                <div class="station-title text-blue-400" id="title-3">NPR</div>
+                <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">US News & Talk</div>
+            </div>
+            <!-- P5: BBC World -->
+            <div class="station-page">
+                <div class="station-title text-amber-500" id="title-4">WORLD</div>
+                <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">BBC News Global</div>
+            </div>
+            <!-- P6: SCIENCE -->
+            <div class="station-page">
+                <div class="station-title text-indigo-400" id="title-5">SCIENCE</div>
+                <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">NASA Mission Audio</div>
+            </div>
+            <!-- P7: US News -->
+            <div class="station-page">
+                <div class="station-title text-red-500" id="title-6">C-SPAN</div>
+                <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">US News & Politics</div>
             </div>
         </div>
 
-        <!-- Bottom Page Indicator -->
-        <div class="absolute bottom-10 w-full flex justify-center gap-3 z-50 pointer-events-none">
-            <div id="dot-0" class="w-1.5 h-1.5 rounded-full bg-white/20 transition-all"></div>
-            <div id="dot-1" class="w-1.5 h-1.5 rounded-full bg-white/20 transition-all"></div>
-            <div id="dot-2" class="w-1.5 h-1.5 rounded-full bg-white/20 transition-all"></div>
-        </div>
+        <!-- Progress Tracker -->
+        <div id="dot-container" class="absolute bottom-12 w-full flex justify-center gap-2.5 z-50"></div>
     </div>
 
-    <!-- Hidden Audio element -->
-    <audio id="radio-player" preload="auto"></audio>
+    <!-- Preload none saves bandwidth and prevents background stalling errors -->
+    <audio id="radio-player" preload="none"></audio>
 
     <script>
         lucide.createIcons();
 
+        // Restored HLS support for BBC, kept MP3 for US stations to bypass geo-blocks.
         const stations = [
             { name: "Radio Paradise", url: "https://stream.radioparadise.com/mp3-128", type: 'mp3' },
             { name: "RP Rock Mix", url: "https://stream.radioparadise.com/rock-128", type: 'mp3' },
-            { name: "BBC Radio 4", url: "https://as-hls-ww-live.akamaized.net/pool_55057080/live/ww/bbc_radio_fourfm/bbc_radio_fourfm.isml/bbc_radio_fourfm-audio%3d96000.norewind.m3u8", type: 'hls' }
+            { name: "BBC Radio 4", url: "https://as-hls-ww-live.akamaized.net/pool_55057080/live/ww/bbc_radio_fourfm/bbc_radio_fourfm.isml/bbc_radio_fourfm-audio%3d96000.norewind.m3u8", type: 'hls' },
+            { name: "NPR (WNYC)", url: "https://fm939.wnyc.org/wnycfm", type: 'mp3' }, 
+            { name: "BBC World Service", url: "https://stream.live.vc.bbcmedia.co.uk/bbc_world_service", type: 'mp3' },
+            { name: "Mission Control", url: "https://ice1.somafm.com/missioncontrol-128-mp3", type: 'mp3' }, 
+            { name: "C-SPAN Radio", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/CSPANRADIO.mp3", type: 'mp3' } 
         ];
 
         let currentIndex = 0;
@@ -145,65 +169,89 @@
         const carousel = document.getElementById('station-carousel');
         const btStatus = document.getElementById('bt-status');
         const statusDot = document.getElementById('status-dot');
+        const dotContainer = document.getElementById('dot-container');
 
-        // --- MEDIA SESSION (Sync with Car Bluetooth) ---
+        // Create Dots
+        stations.forEach((_, i) => {
+            const d = document.createElement('div');
+            d.id = 'dot-' + i;
+            d.className = 'dot';
+            dotContainer.appendChild(d);
+        });
+
         function updateMediaSession() {
             if ('mediaSession' in navigator) {
-                const station = stations[currentIndex];
-                
+                const s = stations[currentIndex];
                 navigator.mediaSession.metadata = new MediaMetadata({
-                    title: station.name,
-                    artist: "AutoHub Radio",
+                    title: s.name,
+                    artist: "AutoHub Driver Hub",
                     album: "Preset " + (currentIndex + 1)
                 });
-
-                // Attach Bluetooth Button Listeners
-                navigator.mediaSession.setActionHandler('play', () => { if (!isPlaying) togglePlay(); });
-                navigator.mediaSession.setActionHandler('pause', () => { if (isPlaying) togglePlay(); });
+                
+                navigator.mediaSession.setActionHandler('play', () => { if(!isPlaying) togglePlay(); });
+                navigator.mediaSession.setActionHandler('pause', () => { if(isPlaying) togglePlay(); });
                 navigator.mediaSession.setActionHandler('previoustrack', () => prevStation());
                 navigator.mediaSession.setActionHandler('nexttrack', () => nextStation());
                 
-                btStatus.innerText = station.name;
-                statusDot.classList.remove('bg-neutral-600');
-                statusDot.classList.add('bg-blue-500');
+                btStatus.innerText = s.name;
+                statusDot.className = "w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]";
             }
         }
 
-        // --- RADIO LOGIC ---
         function syncStation() {
-            const station = stations[currentIndex];
+            const s = stations[currentIndex];
             
             if (hlsInstance) {
                 hlsInstance.destroy();
                 hlsInstance = null;
             }
-            
+
+            // Cleanly switch the source. Setting `src` automatically aborts the current
+            // fetch and starts a new one, avoiding the empty `load()` errors.
             player.pause();
-            player.src = "";
+            player.removeAttribute('src');
             player.load();
 
-            if (station.type === 'hls') {
-                if (Hls.isSupported()) {
-                    hlsInstance = new Hls();
-                    hlsInstance.loadSource(station.url);
+            if (s.type === 'hls') {
+                // ADDED typeof check to prevent ReferenceError if the library gets blocked by the environment
+                if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+                    hlsInstance = new Hls({
+                        enableWorker: true,
+                        lowLatencyMode: true
+                    });
+                    hlsInstance.loadSource(s.url);
                     hlsInstance.attachMedia(player);
+                } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
+                    player.src = s.url;
+                } else {
+                    console.error("HLS is not supported or failed to load in this browser.");
+                    btStatus.innerText = "HLS ERROR";
+                    statusDot.className = "w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]";
                 }
             } else {
-                player.src = station.url;
+                player.src = s.url;
             }
 
-            // Only auto-play if the user had the radio on already
             if (isPlaying) {
-                player.play().catch(e => console.warn("Stream interrupted:", e));
+                player.play().catch(e => {
+                    // Ignore AbortError caused by rapid swiping
+                    if (e.name !== 'AbortError') {
+                        console.warn("Autoplay prevented:", e);
+                        isPlaying = false;
+                        updateUI();
+                    }
+                });
             }
             updateMediaSession();
         }
 
         function togglePlay() {
-            if (!player.src && !hlsInstance) syncStation();
+            if ((!player.src || player.src === window.location.href) && !hlsInstance) {
+                syncStation();
+            }
             
             if (isPlaying) {
-                player.pause();
+                player.pause(); 
                 isPlaying = false;
                 if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
             } else {
@@ -212,73 +260,83 @@
                     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
                     updateUI();
                 }).catch(e => {
-                    console.error("Play failed", e);
+                    if (e.name !== 'AbortError') {
+                        console.error("Manual play failed:", e);
+                        isPlaying = false;
+                        updateUI();
+                        btStatus.innerText = "STREAM ERROR";
+                        statusDot.className = "w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]";
+                    }
                 });
             }
             updateUI();
         }
 
-        function nextStation() {
-            currentIndex = (currentIndex + 1) % stations.length;
-            updateCarousel();
-        }
-
-        function prevStation() {
-            currentIndex = (currentIndex - 1 + stations.length) % stations.length;
-            updateCarousel();
-        }
+        function nextStation() { currentIndex = (currentIndex + 1) % stations.length; updateCarousel(); }
+        function prevStation() { currentIndex = (currentIndex - 1 + stations.length) % stations.length; updateCarousel(); }
 
         function updateCarousel() {
             carousel.style.transform = `translateX(-${currentIndex * 100}vw)`;
-            
-            // Visual Dot Update
-            [0, 1, 2].forEach(i => {
-                const dot = document.getElementById('dot-' + i);
-                dot.style.backgroundColor = (i === currentIndex) ? 'white' : 'rgba(255,255,255,0.2)';
-                dot.style.width = (i === currentIndex) ? '24px' : '6px';
+            stations.forEach((_, i) => {
+                const d = document.getElementById('dot-' + i);
+                d.className = (i === currentIndex) ? 'dot dot-active' : 'dot';
             });
-
             syncStation();
             updateUI();
         }
 
         function updateUI() {
-            // Update the play/pause icon
             mainIcon.setAttribute('data-lucide', isPlaying ? 'pause' : 'play');
             lucide.createIcons();
-            
-            // Adjust opacity based on playing state
-            const iconContainer = document.getElementById('play-pause-container');
-            iconContainer.style.opacity = isPlaying ? "0.05" : "0.3";
-
-            // Add glow to title if playing
+            document.getElementById('play-pause-container').style.opacity = isPlaying ? "0.05" : "0.3";
             document.querySelectorAll('.station-title').forEach((title, i) => {
                 title.classList.toggle('active-glow', isPlaying && i === currentIndex);
             });
         }
 
-        // --- GESTURE DETECTION ---
         let startX = 0;
         document.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, {passive:true});
         document.addEventListener('touchend', e => {
             const dx = startX - e.changedTouches[0].clientX;
-            // High threshold to avoid accidental skips during play/pause taps
-            if (Math.abs(dx) > 80) {
-                if (dx > 0) nextStation(); else prevStation();
-            }
+            // 70px threshold prevents accidental swipes when tapping play/pause
+            if (Math.abs(dx) > 70) { if (dx > 0) nextStation(); else prevStation(); }
         });
 
-        // Ensure browser handles audio focus correctly
-        player.addEventListener('play', () => { isPlaying = true; updateUI(); });
-        player.addEventListener('pause', () => { isPlaying = false; updateUI(); });
+        // Ensure browser state overrides match UI
+        player.addEventListener('play', () => { 
+            isPlaying = true; 
+            updateUI(); 
+            if('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing"; 
+        });
+        
+        player.addEventListener('pause', () => { 
+            isPlaying = false; 
+            updateUI(); 
+            if('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused"; 
+        });
 
-        // Keep Screen On
+        player.addEventListener('error', (e) => {
+            const err = player.error;
+            // Code 1 is MEDIA_ERR_ABORTED - expected when swiping rapidly. Safely ignore.
+            if (err && err.code === 1) return;
+            
+            console.error("Audio player error code:", err ? err.code : 'unknown');
+            isPlaying = false;
+            updateUI();
+            btStatus.innerText = "NETWORK ERROR";
+            statusDot.className = "w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]";
+        });
+
+        // Wake Lock Logic for sustained background tasks
         if ('wakeLock' in navigator) {
             let wl = null;
-            const requestWL = async () => { try { wl = await navigator.wakeLock.request('screen'); } catch(e){} };
-            requestWL();
-            document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') requestWL(); });
+            const req = async () => { try { wl = await navigator.wakeLock.request('screen'); } catch(e){} };
+            req(); 
+            document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') req(); });
         }
+        
+        // Init
+        updateCarousel();
     </script>
 </body>
 </html>

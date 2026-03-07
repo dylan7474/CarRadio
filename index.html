@@ -201,14 +201,18 @@
                 const s = stations[currentIndex];
                 navigator.mediaSession.metadata = new MediaMetadata({
                     title: s.name,
-                    artist: "AutoHub Driver Hub",
-                    album: "Preset " + (currentIndex + 1)
+                    artist: "AutoHub Live Radio",
+                    album: "Preset Channel " + (currentIndex + 1)
                 });
                 
+                // Ensure handlers are always active
                 navigator.mediaSession.setActionHandler('play', () => togglePlay());
                 navigator.mediaSession.setActionHandler('pause', () => togglePlay());
                 navigator.mediaSession.setActionHandler('previoustrack', () => prevStation());
                 navigator.mediaSession.setActionHandler('nexttrack', () => nextStation());
+                
+                // Update playstate metadata so car display knows if it's playing
+                navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
                 
                 btStatus.innerText = s.name;
                 statusDot.className = "w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]";
@@ -279,6 +283,9 @@
                 });
             }
             updateUI();
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+            }
         }
 
         function nextStation() { currentIndex = (currentIndex + 1) % stations.length; updateCarousel(); }
@@ -304,8 +311,20 @@
 
         // --- Audio Event Logging ---
         player.addEventListener('waiting', () => { log("Buffering..."); spinner.classList.remove('hidden'); });
-        player.addEventListener('playing', () => { log("Playing"); spinner.classList.add('hidden'); isPlaying = true; updateUI(); });
-        player.addEventListener('pause', () => { log("Paused"); spinner.classList.add('hidden'); isPlaying = false; updateUI(); });
+        player.addEventListener('playing', () => { 
+            log("Playing"); 
+            spinner.classList.add('hidden'); 
+            isPlaying = true; 
+            updateUI(); 
+            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
+        });
+        player.addEventListener('pause', () => { 
+            log("Paused"); 
+            spinner.classList.add('hidden'); 
+            isPlaying = false; 
+            updateUI(); 
+            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
+        });
         player.addEventListener('stalled', () => { log("Network Stalled"); });
         player.addEventListener('error', (e) => {
             log("Audio Error: " + player.error.code);

@@ -6,7 +6,6 @@
     <title>AutoHub - Master Radio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Swapped to Cloudflare CDN which is less likely to be blocked by browser environments -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js"></script>
     <style>
         body, html { 
@@ -37,7 +36,7 @@
         }
 
         .active-glow {
-            filter: drop-shadow(0 0 40px rgba(255, 255, 255, 0.2));
+            filter: drop-shadow(0 0 40px rgba(59, 130, 246, 0.4));
             transition: filter 0.5s ease;
         }
 
@@ -64,9 +63,27 @@
             top: 2.5rem;
             width: 100%;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
             z-index: 50;
             pointer-events: none;
+            gap: 0.5rem;
+        }
+
+        /* Loading Spinner */
+        .loader {
+            width: 12px; height: 12px;
+            border: 2px solid white;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .dot {
@@ -90,7 +107,10 @@
             <div class="bg-white/5 border border-white/10 px-4 py-1.5 rounded-full flex items-center gap-3 shadow-lg">
                 <div id="status-dot" class="w-2 h-2 rounded-full bg-neutral-600 transition-colors"></div>
                 <span id="bt-status" class="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Ready</span>
+                <div id="loading-spinner" class="hidden"><span class="loader"></span></div>
             </div>
+            <!-- Live Logging Feedback -->
+            <div id="debug-log" class="text-[7px] text-white/20 uppercase tracking-widest font-mono">System Standby</div>
         </div>
 
         <!-- Touch Interaction Layer -->
@@ -102,40 +122,33 @@
 
         <!-- Dynamic Station Pages -->
         <div id="station-carousel">
-            <!-- P1: Paradise -->
             <div class="station-page">
                 <div class="station-title text-blue-500" id="title-0">PARADISE</div>
                 <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">Main Mix</div>
             </div>
-            <!-- P2: Rock -->
             <div class="station-page">
                 <div class="station-title text-red-600" id="title-1">ROCK</div>
                 <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">Paradise Rock</div>
             </div>
-            <!-- P3: BBC R4 -->
             <div class="station-page">
                 <div class="station-title text-neutral-400" id="title-2">RADIO 4</div>
                 <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">BBC Culture</div>
             </div>
-            <!-- P4: NPR News -->
             <div class="station-page">
                 <div class="station-title text-blue-400" id="title-3">NPR</div>
                 <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">US News & Talk</div>
             </div>
-            <!-- P5: BBC World -->
             <div class="station-page">
-                <div class="station-title text-amber-500" id="title-4">WORLD</div>
-                <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">BBC News Global</div>
+                <div class="station-title text-indigo-400" id="title-4">WORLD</div>
+                <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">BBC World Service</div>
             </div>
-            <!-- P6: SCIENCE -->
             <div class="station-page">
-                <div class="station-title text-indigo-400" id="title-5">SCIENCE</div>
-                <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">NASA Mission Audio</div>
+                <div class="station-title text-amber-500" id="title-5">CLASSIC</div>
+                <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">Classical Focus</div>
             </div>
-            <!-- P7: US News -->
             <div class="station-page">
                 <div class="station-title text-red-500" id="title-6">C-SPAN</div>
-                <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">US News & Politics</div>
+                <div class="text-white/30 font-bold tracking-[0.4em] mt-4 uppercase text-[10px]">Politics & Debate</div>
             </div>
         </div>
 
@@ -143,20 +156,18 @@
         <div id="dot-container" class="absolute bottom-12 w-full flex justify-center gap-2.5 z-50"></div>
     </div>
 
-    <!-- Preload none saves bandwidth and prevents background stalling errors -->
     <audio id="radio-player" preload="none"></audio>
 
     <script>
         lucide.createIcons();
 
-        // Restored HLS support for BBC, kept MP3 for US stations to bypass geo-blocks.
         const stations = [
             { name: "Radio Paradise", url: "https://stream.radioparadise.com/mp3-128", type: 'mp3' },
             { name: "RP Rock Mix", url: "https://stream.radioparadise.com/rock-128", type: 'mp3' },
             { name: "BBC Radio 4", url: "https://as-hls-ww-live.akamaized.net/pool_55057080/live/ww/bbc_radio_fourfm/bbc_radio_fourfm.isml/bbc_radio_fourfm-audio%3d96000.norewind.m3u8", type: 'hls' },
             { name: "NPR (WNYC)", url: "https://fm939.wnyc.org/wnycfm", type: 'mp3' }, 
-            { name: "BBC World Service", url: "https://stream.live.vc.bbcmedia.co.uk/bbc_world_service", type: 'mp3' },
-            { name: "Mission Control", url: "https://ice1.somafm.com/missioncontrol-128-mp3", type: 'mp3' }, 
+            { name: "BBC World", url: "https://stream.live.vc.bbcmedia.co.uk/bbc_world_service", type: 'mp3' },
+            { name: "YourClassical", url: "https://cms.stream.publicradio.org/cms.mp3", type: 'mp3' }, 
             { name: "C-SPAN Radio", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/CSPANRADIO.mp3", type: 'mp3' } 
         ];
 
@@ -170,8 +181,14 @@
         const btStatus = document.getElementById('bt-status');
         const statusDot = document.getElementById('status-dot');
         const dotContainer = document.getElementById('dot-container');
+        const debugLog = document.getElementById('debug-log');
+        const spinner = document.getElementById('loading-spinner');
 
-        // Create Dots
+        function log(msg) {
+            debugLog.innerText = msg;
+            console.log("[AutoHub] " + msg);
+        }
+
         stations.forEach((_, i) => {
             const d = document.createElement('div');
             d.id = 'dot-' + i;
@@ -188,84 +205,76 @@
                     album: "Preset " + (currentIndex + 1)
                 });
                 
-                navigator.mediaSession.setActionHandler('play', () => { if(!isPlaying) togglePlay(); });
-                navigator.mediaSession.setActionHandler('pause', () => { if(isPlaying) togglePlay(); });
+                navigator.mediaSession.setActionHandler('play', () => togglePlay());
+                navigator.mediaSession.setActionHandler('pause', () => togglePlay());
                 navigator.mediaSession.setActionHandler('previoustrack', () => prevStation());
                 navigator.mediaSession.setActionHandler('nexttrack', () => nextStation());
                 
                 btStatus.innerText = s.name;
-                statusDot.className = "w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]";
+                statusDot.className = "w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]";
             }
         }
 
         function syncStation() {
             const s = stations[currentIndex];
+            log("Switching to " + s.name);
+            spinner.classList.remove('hidden');
             
             if (hlsInstance) {
                 hlsInstance.destroy();
                 hlsInstance = null;
             }
 
-            // Cleanly switch the source. Setting `src` automatically aborts the current
-            // fetch and starts a new one, avoiding the empty `load()` errors.
             player.pause();
-            player.removeAttribute('src');
+            player.src = "";
             player.load();
 
             if (s.type === 'hls') {
-                // ADDED typeof check to prevent ReferenceError if the library gets blocked by the environment
                 if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-                    hlsInstance = new Hls({
-                        enableWorker: true,
-                        lowLatencyMode: true
-                    });
+                    hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: true });
                     hlsInstance.loadSource(s.url);
                     hlsInstance.attachMedia(player);
+                    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+                        log("HLS Manifest OK");
+                        if(isPlaying) player.play();
+                    });
                 } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
                     player.src = s.url;
-                } else {
-                    console.error("HLS is not supported or failed to load in this browser.");
-                    btStatus.innerText = "HLS ERROR";
-                    statusDot.className = "w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]";
                 }
             } else {
                 player.src = s.url;
+                player.load();
             }
 
             if (isPlaying) {
                 player.play().catch(e => {
-                    // Ignore AbortError caused by rapid swiping
-                    if (e.name !== 'AbortError') {
-                        console.warn("Autoplay prevented:", e);
-                        isPlaying = false;
-                        updateUI();
-                    }
+                    if (e.name !== 'AbortError') log("Auto-Play Blocked");
                 });
             }
             updateMediaSession();
         }
 
         function togglePlay() {
-            if ((!player.src || player.src === window.location.href) && !hlsInstance) {
+            if (!player.src || player.src === window.location.href) {
                 syncStation();
             }
             
             if (isPlaying) {
+                log("Pause Requested");
                 player.pause(); 
                 isPlaying = false;
-                if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused";
             } else {
+                log("Play Requested...");
+                spinner.classList.remove('hidden');
                 player.play().then(() => {
+                    log("Stream Live");
                     isPlaying = true;
-                    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing";
                     updateUI();
                 }).catch(e => {
                     if (e.name !== 'AbortError') {
-                        console.error("Manual play failed:", e);
+                        log("Error: " + e.message.substring(0, 15));
                         isPlaying = false;
                         updateUI();
-                        btStatus.innerText = "STREAM ERROR";
-                        statusDot.className = "w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]";
                     }
                 });
             }
@@ -278,8 +287,7 @@
         function updateCarousel() {
             carousel.style.transform = `translateX(-${currentIndex * 100}vw)`;
             stations.forEach((_, i) => {
-                const d = document.getElementById('dot-' + i);
-                d.className = (i === currentIndex) ? 'dot dot-active' : 'dot';
+                document.getElementById('dot-' + i).className = (i === currentIndex) ? 'dot dot-active' : 'dot';
             });
             syncStation();
             updateUI();
@@ -294,40 +302,24 @@
             });
         }
 
+        // --- Audio Event Logging ---
+        player.addEventListener('waiting', () => { log("Buffering..."); spinner.classList.remove('hidden'); });
+        player.addEventListener('playing', () => { log("Playing"); spinner.classList.add('hidden'); isPlaying = true; updateUI(); });
+        player.addEventListener('pause', () => { log("Paused"); spinner.classList.add('hidden'); isPlaying = false; updateUI(); });
+        player.addEventListener('stalled', () => { log("Network Stalled"); });
+        player.addEventListener('error', (e) => {
+            log("Audio Error: " + player.error.code);
+            spinner.classList.add('hidden');
+        });
+
+        // Swipe handling
         let startX = 0;
         document.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, {passive:true});
         document.addEventListener('touchend', e => {
             const dx = startX - e.changedTouches[0].clientX;
-            // 70px threshold prevents accidental swipes when tapping play/pause
             if (Math.abs(dx) > 70) { if (dx > 0) nextStation(); else prevStation(); }
         });
 
-        // Ensure browser state overrides match UI
-        player.addEventListener('play', () => { 
-            isPlaying = true; 
-            updateUI(); 
-            if('mediaSession' in navigator) navigator.mediaSession.playbackState = "playing"; 
-        });
-        
-        player.addEventListener('pause', () => { 
-            isPlaying = false; 
-            updateUI(); 
-            if('mediaSession' in navigator) navigator.mediaSession.playbackState = "paused"; 
-        });
-
-        player.addEventListener('error', (e) => {
-            const err = player.error;
-            // Code 1 is MEDIA_ERR_ABORTED - expected when swiping rapidly. Safely ignore.
-            if (err && err.code === 1) return;
-            
-            console.error("Audio player error code:", err ? err.code : 'unknown');
-            isPlaying = false;
-            updateUI();
-            btStatus.innerText = "NETWORK ERROR";
-            statusDot.className = "w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]";
-        });
-
-        // Wake Lock Logic for sustained background tasks
         if ('wakeLock' in navigator) {
             let wl = null;
             const req = async () => { try { wl = await navigator.wakeLock.request('screen'); } catch(e){} };
@@ -335,7 +327,6 @@
             document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') req(); });
         }
         
-        // Init
         updateCarousel();
     </script>
 </body>

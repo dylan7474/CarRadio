@@ -36,6 +36,22 @@ Then open `http://localhost:8080`.
   - Loading spinner appears while buffering/connecting.
   - Bottom dots show the currently selected preset.
 
+## Docker deploy script
+
+A helper script is included to build and run the app in Docker:
+
+```bash
+./deploy.sh            # defaults to port 3011
+./deploy.sh 8080       # deploy on a custom port
+```
+
+What it does:
+
+- Regenerates `.dockerignore`, `server.js`, and `Dockerfile`.
+- Builds a `carradio` Docker image.
+- Replaces any running `carradio` container.
+- Starts the container with `--restart unless-stopped`.
+
 ## Roadmap
 
 - Add editable/custom station presets (save to local storage).

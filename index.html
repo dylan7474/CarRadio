@@ -174,6 +174,7 @@
         let currentIndex = 0;
         let isPlaying = false;
         let hlsInstance = null;
+        let mediaSessionHandlersBound = false;
         
         const player = document.getElementById('radio-player');
         const mainIcon = document.getElementById('main-icon');
@@ -205,11 +206,7 @@
                     album: "Preset Channel " + (currentIndex + 1)
                 });
                 
-                // Ensure handlers are always active
-                navigator.mediaSession.setActionHandler('play', () => togglePlay());
-                navigator.mediaSession.setActionHandler('pause', () => togglePlay());
-                navigator.mediaSession.setActionHandler('previoustrack', () => prevStation());
-                navigator.mediaSession.setActionHandler('nexttrack', () => nextStation());
+                bindMediaSessionHandlers();
                 
                 // Update playstate metadata so car display knows if it's playing
                 navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
@@ -217,6 +214,30 @@
                 btStatus.innerText = s.name;
                 statusDot.className = "w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]";
             }
+        }
+
+        function bindMediaSessionHandlers() {
+            if (!('mediaSession' in navigator) || mediaSessionHandlersBound) return;
+
+            const handlers = {
+                play: () => startPlayback(),
+                pause: () => pausePlayback(),
+                previoustrack: () => prevStation(),
+                nexttrack: () => nextStation(),
+                seekbackward: () => prevStation(),
+                seekforward: () => nextStation(),
+                stop: () => pausePlayback()
+            };
+
+            Object.entries(handlers).forEach(([action, handler]) => {
+                try {
+                    navigator.mediaSession.setActionHandler(action, handler);
+                } catch (e) {
+                    // Ignore unsupported actions per browser/vehicle implementation
+                }
+            });
+
+            mediaSessionHandlersBound = true;
         }
 
         function syncStation() {
@@ -258,34 +279,47 @@
             updateMediaSession();
         }
 
-        function togglePlay() {
+        function startPlayback() {
             if (!player.src || player.src === window.location.href) {
                 syncStation();
             }
-            
-            if (isPlaying) {
-                log("Pause Requested");
-                player.pause(); 
-                isPlaying = false;
-            } else {
-                log("Play Requested...");
-                spinner.classList.remove('hidden');
-                player.play().then(() => {
-                    log("Stream Live");
-                    isPlaying = true;
+
+            if (isPlaying) return;
+
+            log("Play Requested...");
+            spinner.classList.remove('hidden');
+            player.play().then(() => {
+                log("Stream Live");
+                isPlaying = true;
+                updateUI();
+            }).catch(e => {
+                if (e.name !== 'AbortError') {
+                    log("Error: " + e.message.substring(0, 15));
+                    isPlaying = false;
                     updateUI();
-                }).catch(e => {
-                    if (e.name !== 'AbortError') {
-                        log("Error: " + e.message.substring(0, 15));
-                        isPlaying = false;
-                        updateUI();
-                    }
-                });
-            }
+                }
+            });
             updateUI();
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
             }
+        }
+
+        function pausePlayback() {
+            if (!isPlaying) return;
+
+            log("Pause Requested");
+            player.pause();
+            isPlaying = false;
+            updateUI();
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.playbackState = "paused";
+            }
+        }
+
+        function togglePlay() {
+            if (isPlaying) pausePlayback();
+            else startPlayback();
         }
 
         function nextStation() { currentIndex = (currentIndex + 1) % stations.length; updateCarousel(); }
@@ -337,6 +371,17 @@
         document.addEventListener('touchend', e => {
             const dx = startX - e.changedTouches[0].clientX;
             if (Math.abs(dx) > 70) { if (dx > 0) nextStation(); else prevStation(); }
+        });
+
+        // Bluetooth/keyboard fallback for systems that dispatch media keys as key events.
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'MediaTrackNext' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                nextStation();
+            } else if (e.code === 'MediaTrackPrevious' || e.code === 'ArrowDown') {
+                e.preventDefault();
+                prevStation();
+            }
         });
 
         if ('wakeLock' in navigator) {

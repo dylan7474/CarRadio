@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AutoHub - Legacy Radio</title>
+    <style>
+        /* Base styles using classic CSS */
+        body, html { 
+            margin: 0; padding: 0; height: 100%; overflow: hidden; 
+            background-color: #000; color: #ffffff; 
+            font-family: -apple-system, Helvetica, Arial, sans-serif;
+            -webkit-user-select: none;
+        }
+        
+        #app-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #station-carousel { 
+            display: block; 
+            white-space: nowrap;
+            width: 100%; 
+            height: 100%; 
+            transition: -webkit-transform 0.5s ease-out;
+            transition: transform 0.5s ease-out;
+        }
+
+        .station-page { 
+            display: inline-block;
+            vertical-align: top;
+            width: 100%; 
+            height: 100%; 
+            text-align: center;
+            white-space: normal;
+        }
+
+        .station-content {
+            display: table;
+            width: 100%;
+            height: 100%;
+        }
+
+        .station-inner {
+            display: table-cell;
+            vertical-align: middle;
+            padding: 20px;
+        }
+
+        .station-title {
+            font-size: 72px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -2px;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .station-subtitle {
+            color: rgba(255,255,255,0.3);
+            font-weight: bold;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            font-size: 12px;
+            margin-top: 15px;
+        }
+
+        /* Colors for Legacy */
+        .color-blue { color: #3b82f6; }
+        .color-red { color: #ef4444; }
+        .color-gray { color: #9ca3af; }
+        .color-indigo { color: #6366f1; }
+        .color-amber { color: #f59e0b; }
+
+        .master-control {
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 100;
+            width: 100%; height: 100%;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            outline: none;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+        }
+
+        .play-pause-icon {
+            font-size: 120px;
+            opacity: 0.15;
+            color: white;
+            pointer-events: none;
+        }
+
+        .status-bar {
+            position: absolute;
+            top: 30px;
+            width: 100%;
+            text-align: center;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .status-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 6px 15px;
+            border-radius: 20px;
+        }
+
+        #bt-status {
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: rgba(255,255,255,0.6);
+        }
+
+        #debug-log {
+            font-size: 8px;
+            color: rgba(255,255,255,0.2);
+            text-transform: uppercase;
+            margin-top: 10px;
+            font-family: monospace;
+        }
+
+        .dot-container {
+            position: absolute;
+            bottom: 40px;
+            width: 100%;
+            text-align: center;
+            z-index: 50;
+        }
+
+        .dot {
+            display: inline-block;
+            width: 8px; height: 8px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.2);
+            margin: 0 5px;
+            transition: all 0.3s ease;
+        }
+        .dot-active {
+            background: #fff;
+            width: 25px;
+        }
+
+        /* Spinner for older browsers */
+        .spinner {
+            display: none;
+            width: 14px; height: 14px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+
+        @-webkit-keyframes spin {
+            to { -webkit-transform: rotate(360deg); }
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        
+        <div class="status-bar">
+            <div class="status-badge">
+                <span id="bt-status">Ready</span>
+                <div id="loading-spinner" class="spinner"></div>
+            </div>
+            <div id="debug-log">System Standby</div>
+        </div>
+
+        <button class="master-control" onclick="togglePlay()">
+            <div id="play-pause-container" class="play-pause-icon">
+                <span id="main-icon">►</span>
+            </div>
+        </button>
+
+        <div id="station-carousel">
+            <!-- Legacy browsers prefer inline-block for carousels -->
+            <div class="station-page">
+                <div class="station-content"><div class="station-inner">
+                    <div class="station-title color-blue">PARADISE</div>
+                    <div class="station-subtitle">Main Mix</div>
+                </div></div>
+            </div>
+            <div class="station-page">
+                <div class="station-content"><div class="station-inner">
+                    <div class="station-title color-red">ROCK</div>
+                    <div class="station-subtitle">Paradise Rock</div>
+                </div></div>
+            </div>
+            <div class="station-page">
+                <div class="station-content"><div class="station-inner">
+                    <div class="station-title color-gray">RADIO 4</div>
+                    <div class="station-subtitle">BBC Culture</div>
+                </div></div>
+            </div>
+            <div class="station-page">
+                <div class="station-content"><div class="station-inner">
+                    <div class="station-title color-blue">NPR</div>
+                    <div class="station-subtitle">US News & Talk</div>
+                </div></div>
+            </div>
+            <div class="station-page">
+                <div class="station-content"><div class="station-inner">
+                    <div class="station-title color-indigo">WORLD</div>
+                    <div class="station-subtitle">BBC World Service</div>
+                </div></div>
+            </div>
+            <div class="station-page">
+                <div class="station-content"><div class="station-inner">
+                    <div class="station-title color-amber">CLASSIC</div>
+                    <div class="station-subtitle">Classical Focus</div>
+                </div></div>
+            </div>
+            <div class="station-page">
+                <div class="station-content"><div class="station-inner">
+                    <div class="station-title color-red">C-SPAN</div>
+                    <div class="station-subtitle">Politics & Debate</div>
+                </div></div>
+            </div>
+        </div>
+
+        <div id="dot-container" class="dot-container"></div>
+    </div>
+
+    <audio id="radio-player"></audio>
+
+    <script>
+        // Use ES5 JavaScript (Var, No Arrow Functions)
+        var stations = [
+            { name: "Radio Paradise", url: "https://stream.radioparadise.com/mp3-128" },
+            { name: "RP Rock Mix", url: "https://stream.radioparadise.com/rock-128" },
+            { name: "BBC Radio 4", url: "https://as-hls-ww-live.akamaized.net/pool_55057080/live/ww/bbc_radio_fourfm/bbc_radio_fourfm.isml/bbc_radio_fourfm-audio%3d96000.norewind.m3u8" },
+            { name: "NPR (WNYC)", url: "https://fm939.wnyc.org/wnycfm" }, 
+            { name: "BBC World", url: "https://stream.live.vc.bbcmedia.co.uk/bbc_world_service" },
+            { name: "YourClassical", url: "https://cms.stream.publicradio.org/cms.mp3" }, 
+            { name: "C-SPAN Radio", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/CSPANRADIO.mp3" } 
+        ];
+
+        var currentIndex = 0;
+        var isPlaying = false;
+        
+        var player = document.getElementById('radio-player');
+        var mainIcon = document.getElementById('main-icon');
+        var carousel = document.getElementById('station-carousel');
+        var btStatus = document.getElementById('bt-status');
+        var dotContainer = document.getElementById('dot-container');
+        var debugLog = document.getElementById('debug-log');
+        var spinner = document.getElementById('loading-spinner');
+
+        function log(msg) {
+            debugLog.innerText = msg;
+        }
+
+        // Initialize dots
+        for (var i = 0; i < stations.length; i++) {
+            var d = document.createElement('div');
+            d.id = 'dot-' + i;
+            d.className = 'dot';
+            dotContainer.appendChild(d);
+        }
+
+        function syncStation() {
+            var s = stations[currentIndex];
+            log("Loading " + s.name);
+            spinner.style.display = 'inline-block';
+            
+            player.pause();
+            player.src = s.url;
+            player.load();
+
+            if (isPlaying) {
+                player.play();
+            }
+            btStatus.innerText = s.name;
+        }
+
+        window.togglePlay = function() {
+            if (!player.src || player.src === window.location.href) {
+                syncStation();
+            }
+            
+            if (isPlaying) {
+                log("Pause Requested");
+                player.pause(); 
+                isPlaying = false;
+            } else {
+                log("Play Requested...");
+                spinner.style.display = 'inline-block';
+                player.play();
+                isPlaying = true;
+            }
+            updateUI();
+        };
+
+        window.nextStation = function() { 
+            currentIndex = (currentIndex + 1) % stations.length; 
+            updateCarousel(); 
+        };
+
+        window.prevStation = function() { 
+            currentIndex = (currentIndex - 1 + stations.length) % stations.length; 
+            updateCarousel(); 
+        };
+
+        function updateCarousel() {
+            var offset = currentIndex * 100;
+            carousel.style.webkitTransform = 'translateX(-' + offset + '%)';
+            carousel.style.transform = 'translateX(-' + offset + '%)';
+            
+            for (var i = 0; i < stations.length; i++) {
+                document.getElementById('dot-' + i).className = (i === currentIndex) ? 'dot dot-active' : 'dot';
+            }
+            syncStation();
+            updateUI();
+        }
+
+        function updateUI() {
+            mainIcon.innerText = isPlaying ? '||' : '►';
+            document.getElementById('play-pause-container').style.opacity = isPlaying ? "0.05" : "0.3";
+        }
+
+        // Audio Events
+        player.addEventListener('waiting', function() { 
+            log("Buffering..."); 
+            spinner.style.display = 'inline-block'; 
+        });
+        player.addEventListener('playing', function() { 
+            log("Playing"); 
+            spinner.style.display = 'none'; 
+            isPlaying = true; 
+            updateUI(); 
+        });
+        player.addEventListener('pause', function() { 
+            log("Paused"); 
+            spinner.style.display = 'none'; 
+            isPlaying = false; 
+            updateUI(); 
+        });
+        player.addEventListener('error', function() {
+            log("Stream Error");
+            spinner.style.display = 'none';
+        });
+
+        // Simple swipe handling for iOS 9
+        var startX = 0;
+        document.addEventListener('touchstart', function(e) { 
+            startX = e.touches[0].clientX; 
+        }, false);
+
+        document.addEventListener('touchend', function(e) {
+            var dx = startX - e.changedTouches[0].clientX;
+            if (Math.abs(dx) > 60) { 
+                if (dx > 0) nextStation(); else prevStation(); 
+            }
+        }, false);
+
+        // Prevent scrolling/bouncing on iPad
+        document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, false);
+        
+        updateCarousel();
+    </script>
+</body>
+</html>

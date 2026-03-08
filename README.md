@@ -31,6 +31,7 @@ Then open `http://localhost:8080`.
   - Play / pause
   - Previous track (previous station)
   - Next track (next station)
+  - Up/down style buttons map to station next/previous on systems that emit those controls as media keys or keyboard events
 - **Status indicators**:
   - Top badge shows readiness/current station.
   - Loading spinner appears while buffering/connecting.

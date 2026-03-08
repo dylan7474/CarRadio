@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # --- Configuration ---
-PORT_ARG=${1:-3011}
+PORT_ARG=${1:-3012}
 PROJECT_NAME="CarRadio"
 IMAGE_NAME="carradio"
 CONTAINER_NAME="carradio"
